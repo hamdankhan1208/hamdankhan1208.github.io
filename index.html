@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hamdan Khan | Data Science, BI & Creative Design</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Configure Tailwind for the Inter font and custom colors -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        // New, vibrant color scheme
+                        'primary-dark': '#3B0764', // Deep, dark purple for background/header
+                        'primary-accent': '#8B5CF6', // Bright violet for accents (like in the image)
+                        'secondary-light': '#F8FAFC', // Near white background for sections
+                        'text-light': '#E5E7EB', // Light gray text for dark backgrounds
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Global Styles */
+        html { scroll-behavior: smooth; }
+        .modal-open { overflow: hidden; }
+
+        /* --- PRELOADER ANIMATION STYLES --- */
+        #preloader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #111827; /* Dark background for a 'space' feel */
+            z-index: 9999;
+            transition: opacity 1s ease-out;
+            opacity: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: default;
+        }
+
+        /* Tool item styles */
+        .tool-item {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            cursor: grab;
+            transition: transform 0.1s ease-out, box-shadow 0.2s ease-out;
+            border-radius: 50%;
+            padding: 8px;
+        }
+        .tool-item:hover {
+            transform: scale(1.2) rotate(5deg) !important; /* Pop out effect */
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.8); /* Glow effect */
+        }
+        .tool-item.dragging {
+            cursor: grabbing;
+            opacity: 0.8;
+            z-index: 10001; /* Above other floating tools */
+        }
+
+        /* Folder target container styles */
+        #folder-target {
+            transition: transform 0.15s ease-out;
+            z-index: 1000;
+        }
+        
+        /* The container scales, but we apply the glow to the image inside */
+        #folder-target.active {
+            transform: scale(1.05); /* Slight scale on drag over */
+            /* Removed box-shadow here to fix the rectangular glow issue */
+        }
+        
+        #folder-target img {
+            width: 250px; /* Large folder size */
+            height: auto;
+            /* Added transition to the image for filter */
+            transition: filter 0.15s ease-out;
+        }
+        
+        /* FIX: Apply the glow to the image using the drop-shadow filter, which respects the image's shape (opacity/transparency). */
+        #folder-target.active img {
+            filter: drop-shadow(0 0 20px #FBBF24) drop-shadow(0 0 10px #FBBF24);
+        }
+        /* END FIX */
+
+        /* Custom Floating Animation (CSS to give it a space feel) */
+        @keyframes float-animation {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            50% { transform: translate(5px, 10px) rotate(1deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
+        }
+        
+        /* Apply different float durations and offsets for a scattered look */
+        [data-float-delay="1"] { animation: float-animation 6s infinite alternate ease-in-out; }
+        [data-float-delay="2"] { animation: float-animation 7s 0.5s infinite alternate ease-in-out; }
+        [data-float-delay="3"] { animation: float-animation 5s 1s infinite alternate ease-in-out; }
+        [data-float-delay="4"] { animation: float-animation 8s 1.5s infinite alternate ease-in-out; }
+        [data-float-delay="5"] { animation: float-animation 6.5s 2s infinite alternate ease-in-out; }
+        [data-float-delay="6"] { animation: float-animation 7.5s 2.5s infinite alternate ease-in-out; }
+
+        /* --- PORTFOLIO CONTENT STYLES (from previous step) --- */
+        .carousel-slide { display: none; transition: opacity 0.6s ease-in-out; }
+        @keyframes typing { from { width: 0 } to { width: 100% } }
+        @keyframes blink-caret { from, to { border-color: transparent } 50% { border-color: #8B5CF6; } }
+        .dynamic-text-container {
+            border-right: .15em solid #8B5CF6;
+            font-family: monospace;
+            overflow: hidden;
+            white-space: nowrap;
+            margin: 0 auto;
+            letter-spacing: .05em;
+            animation: typing 3s steps(40, end), blink-caret .75s step-end infinite;
+        }
+    </style>
+</head>
+<body class="bg-secondary-light font-sans text-gray-800">
+
+    <!-- ----------------------------------------------------------- -->
+    <!-- 1. INTERACTIVE PRELOADER/INTRO PAGE -->
+    <!-- ----------------------------------------------------------- -->
+    <div id="preloader">
+        <div id="skip-button-container" class="absolute top-6 right-6 opacity-0 transition-opacity duration-300 z-[10002]">
+            <button onclick="loadPortfolio()"
+                    class="px-4 py-2 bg-primary-accent text-white font-semibold rounded-lg shadow-lg hover:bg-primary-accent/80 transition duration-150">
+                Skip Intro &rarr;
+            </button>
+        </div>
+        
+        <h2 id="preloader-text" class="text-white text-3xl font-bold mb-12 animate-pulse transition duration-500">
+            Assemble the Data Stack
+        </h2>
+
+        <!-- Folder Drop Target (image_2a9480.png) -->
+        <div id="folder-target" class="w-64 h-64 flex justify-center items-center p-4">
+            <img src="folder.png" alt="Data Folder Icon" class="w-full h-auto drop-shadow-xl" draggable="false" />
+        </div>
+        
+        <p id="progress-text" class="text-gray-400 mt-6 text-lg">0 / 6 tools collected</p>
+
+        <!-- Tool Icons (Scattered and draggable) -->
+        <div id="tool-container" class="absolute inset-0">
+            <!-- Tool 1: Power BI (image_2a9445.png) -->
+            <img data-tool-id="1" data-float-delay="1" src="powerbi.png" alt="Power BI Icon" class="tool-item" style="top: 10%; left: 10%;" draggable="false" />
+            <!-- Tool 2: VS Code (image_2a025f.png) -->
+            <img data-tool-id="2" data-float-delay="2" src="vscode.png" alt="VS Code Icon" class="tool-item" style="bottom: 15%; right: 5%;" draggable="false" />
+            <!-- Tool 3: React (image_2a90c2.png) -->
+            <img data-tool-id="3" data-float-delay="3" src="React.png" alt="React Icon" class="tool-item" style="top: 50%; left: 5%;" draggable="false" />
+            <!-- Tool 4: REST API (image_2a9104.png) -->
+            <img data-tool-id="4" data-float-delay="4" src="restapi.png" alt="REST API Icon" class="tool-item" style="top: 80%; left: 30%;" draggable="false" />
+            <!-- Tool 5: Infinity/Loop (image_2a0295.png) -->
+            <img data-tool-id="5" data-float-delay="5" src="superset.png" alt="Infinity Loop Icon" class="tool-item" style="top: 5%; right: 25%;" draggable="false" />
+             <!-- Tool 6: Placeholder for a new logo (image_2b08c2.png) -->
+            <img data-tool-id="6" data-float-delay="6" src="docker.png" alt="New Tool Icon" class="tool-item" style="bottom: 5%; left: 60%;" draggable="false" />
+        </div>
+    </div>
+    
+    <!-- ----------------------------------------------------------- -->
+    <!-- 2. MAIN PORTFOLIO CONTENT (Hidden initially) -->
+    <!-- ----------------------------------------------------------- -->
+    <div id="portfolio-content" class="opacity-0 transition-opacity duration-1000 pointer-events-none">
+        
+        <!-- Sticky Navigation Bar (Dark Purple) -->
+        <nav class="sticky top-0 z-50 bg-primary-dark shadow-xl">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex">
+                        <div class="flex-shrink-0 flex items-center">
+                            <span class="text-2xl font-bold text-secondary-light">Hamdan Khan</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4 overflow-x-auto whitespace-nowrap py-2 text-text-light">
+                        <a href="#summary" class="hover:text-primary-accent transition duration-150"><strong>Summary</strong></a>
+                        <a href="#data-projects" class="hover:text-primary-accent transition duration-150"><strong>Projects</strong></a>
+                        <a href="#etl-pipeline" class="hover:text-primary-accent transition duration-150"><strong>ETL & Engineering</strong></a>
+                        <a href="#design-work" class="hover:text-primary-accent transition duration-150"><strong>Design Work</strong></a>
+                        <a href="#skills" class="hover:text-primary-accent transition duration-150"><strong>Skills</strong></a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 1. Introduction & Professional Summary (Dark Hero Section) -->
+        <section id="summary" class="relative bg-primary-dark pt-12 pb-24 mb-16 shadow-2xl">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-white">
+                
+                <!-- CIRCULAR PROFILE PHOTO with Shrink Effect -->
+                <div class="mb-6">
+                    <img id="profile-photo"
+                         src="WhatsApp Image 2025-10-10 at 23.11.55_480e64b8_upscayl_2x_remacri-4x.png" 
+                         alt="Your Professional Headshot" 
+                         onerror="this.onerror=null;this.src='https://placehold.co/320x320/8B5CF6/3B0764?text=Hamdan+Khan';"
+                         class="mx-auto w-80 h-80 object-cover rounded-full border-8 border-white shadow-xl ring-8 ring-primary-accent transition-all duration-300 ease-in-out">
+                </div>
+                
+                <h1 class="text-5xl md:text-6xl font-extrabold text-text-light mb-4">
+                    Bridging <span class="text-primary-accent">Data</span> & <span class="text-primary-accent">Design</span>
+                </h1>
+
+                <!-- Dynamic/Interactive Headline -->
+                <div class="flex justify-center">
+                    <p id="dynamic-headline" class="text-2xl md:text-3xl font-light text-text-light dynamic-text-container">
+                        I am a Data Scientist.
+                    </p>
+                </div>
+                
+                <p class="mt-8 max-w-3xl mx-auto text-lg leading-relaxed italic text-gray-300">
+                    A dynamic professional skilled in transforming complex data into clear, compelling, and aesthetically refined insights. Focused on roles bridging technical analytics and user experience (UX) design.
+                </p>
+
+                <div class="flex justify-center flex-wrap gap-6 text-center mt-8">
+                    <a href="https://www.linkedin.com/in/hamdan-khan-15273b258" target="_blank" class="text-primary-accent hover:text-white transition duration-150 font-medium text-lg">LinkedIn</a>
+                    <span class="text-gray-500">|</span>
+                    <a href="https://github.com/hamdankhan1208" target="_blank" class="text-primary-accent hover:text-white transition duration-150 font-medium text-lg">GitHub</a>
+                </div>
+            </div>
+            
+            <!-- Core Competencies Bar (Positioned over the fold) -->
+            <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-2xl border-t-4 border-primary-accent hover:shadow-primary-accent/50 transition duration-300">
+                        <p class="font-bold text-xl text-primary-dark">Data Science & ML</p>
+                        <p class="text-sm text-gray-600">Predictive Analytics, Model Deployment (FastAPI), React Dashboards.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-2xl border-t-4 border-primary-accent hover:shadow-primary-accent/50 transition duration-300">
+                        <p class="font-bold text-xl text-primary-dark">Business Intelligence</p>
+                        <p class="text-sm text-gray-600">Power BI, Metabase/Superset, Data Modeling, DAX, Report Design.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-2xl border-t-4 border-primary-accent hover:shadow-primary-accent/50 transition duration-300">
+                        <p class="font-bold text-xl text-primary-dark">Creative Design</p>
+                        <p class="text-sm text-gray-600">Adobe Photoshop/Illustrator, Branding, Typography, UX/UI Principles.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- End Hero Section -->
+
+        <!-- Main Content Container -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
+
+            <!-- 2. Data Visualization Projects (BI & Predictive Analytics) -->
+            <section id="data-projects" class="mb-16 pt-8">
+                <h2 class="text-3xl font-bold text-gray-900 border-b-2 border-primary-accent pb-2 mb-8">2. Data Visualization Projects (BI & Predictive Analytics)</h2>
+                <p class="text-gray-600 mb-8">Showcasing my ability to analyze, model, and visualize data, applying design excellence to ensure maximum clarity and impact for business users.</p>
+
+                <!-- Project 1: Internship Project Management Dashboard (CAROUSEL) -->
+                <div class="bg-white p-8 rounded-xl shadow-xl hover:shadow-2xl transition duration-300 mb-10 border-l-4 border-primary-accent">
+                    <h3 class="text-2xl font-semibold text-primary-dark mb-4">Project 1: Project Management & Retention Dashboard (Internship)</h3>
+                    <p class="mb-4 text-gray-700"><strong>Role:</strong> Data Analyst Intern | <strong>Tools:</strong> Metabase, Superset, Docker, Power BI</p>
+                    
+                    <!-- PHOTO CAROUSEL -->
+                    <div class="relative w-full overflow-hidden rounded-xl shadow-2xl mb-6">
+                        
+                        <!-- Slides Container -->
+                        <div id="project-carousel">
+                            <!-- Image 1: Global Project Report Overview -->
+                            <div class="carousel-slide" data-slide-index="0">
+                                <img src="Screenshot 2024-12-15 120538.png"
+                                    alt="Global Project Report Overview (Screenshot 2024-12-15 122154.png)"
+                                    onerror="this.onerror=null;this.src='https://placehold.co/1000x750/000000/ffffff?text=Global+Project+Report';"
+                                    class="w-full h-auto object-cover rounded-lg">
+                            </div>
+                            
+                            <!-- Image 2: Project Details Breakdown -->
+                            <div class="carousel-slide" data-slide-index="1">
+                                <img src="Screenshot 2024-12-15 120607.png"
+                                    alt="Project Details Breakdown (Screenshot 2024-12-15 120607.png)"
+                                    onerror="this.onerror=null;this.src='https://placehold.co/1000x750/000000/ffffff?text=Project+Details+View';"
+                                    class="w-full h-auto object-cover rounded-lg">
+                            </div>
+                            
+                            <!-- Image 3: Task Details Breakdown -->
+                            <div class="carousel-slide" data-slide-index="2">
+                                <img src="Screenshot 2024-12-15 120621.png"
+                                    alt="Task Details Breakdown (Screenshot 2024-12-15 120621.png)"
+                                    onerror="this.onerror=null;this.src='https://placehold.co/1000x750/000000/ffffff?text=Task+Details+View';"
+                                    class="w-full h-auto object-cover rounded-lg">
+                            </div>
+                        </div>
+
+                        <!-- Controls (Prev/Next) -->
+                        <button onclick="plusSlides(-1)"
+                                class="absolute top-1/2 left-0 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-3 rounded-r-lg hover:bg-opacity-75 transition focus:outline-none">
+                            &#10094;
+                        </button>
+                        <button onclick="plusSlides(1)"
+                                class="absolute top-1/2 right-0 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-3 rounded-l-lg hover:bg-opacity-75 transition focus:outline-none">
+                            &#10095;
+                        </button>
+                        
+                        <!-- Dots (Indicators) -->
+                        <div class="absolute bottom-4 left-0 right-0 flex justify-center space-x-2">
+                            <span class="carousel-dot cursor-pointer h-3 w-3 rounded-full opacity-70 hover:opacity-100 transition" onclick="currentSlide(0)"></span>
+                            <span class="carousel-dot cursor-pointer h-3 w-3 rounded-full opacity-70 hover:opacity-100 transition" onclick="currentSlide(1)"></span>
+                            <span class="carousel-dot cursor-pointer h-3 w-3 rounded-full opacity-70 hover:opacity-100 transition" onclick="currentSlide(2)"></span>
+                        </div>
+                    </div>
+                    <!-- END PHOTO CAROUSEL -->
+
+                    <h4 class="text-xl font-bold text-gray-700 mb-3">Key Features & Impact:</h4>
+                    <ul class="list-disc list-inside space-y-2 ml-4 text-gray-600">
+                        <li><strong>Design Evolution:</strong> The design of this dashboard was built on previous experiences after learning the ins and outs of PowerBI to integrate new styles and design languages.</li>
+                        <li><strong>Employee Retention Focus:</strong> Designed a multi-faceted dashboard to analyze retention and workload, providing management with enhanced analytical data using Metabase and Superset.</li>
+                        <li><strong>Key Performance Indicators (KPIs):</strong> Calculated and tracked operational metrics including Project Breach Rate (59.39%) and Task Breach Rate (69.84%), providing immediate focus areas.</li>
+                        <li><strong>Dockerized Architecture:</strong> Implemented and streamlined data pipelines by dockerizing the BI architecture to accelerate deployment and ensure reliability across environments.</li>
+                        <li><strong>Hierarchical Reporting:</strong> Built a unified report allowing drill-down from Client/Project/Team summaries to granular Task Details.</li>
+                    </ul>
+                </div>
+
+                <!-- Project 2: Data Driven State of Health Estimation of Lithium Ion Cells in EVs (Final Year Project) -->
+                <div class="bg-white p-8 rounded-xl shadow-xl hover:shadow-2xl transition duration-300 mb-10 border-l-4 border-primary-accent">
+                    <h3 class="text-2xl font-semibold text-primary-dark mb-4">Project 2: State of Health (SoH) Estimation in EVs (Final Year Project)</h3>
+                    <p class="mb-4 text-gray-700"><strong>Role:</strong> Project Leader / Full-Stack Developer | <strong>Tools:</strong> React, Python, ML/Predictive Modeling, FastAPI</p>
+
+                    <div class="relative w-full overflow-hidden rounded-xl shadow-2xl mb-6">
+                        <img src="Screenshot 2025-10-10 225333.png"
+                            alt="Predictive Analytics Dashboard for EV Battery Health"
+                            data-index="3"
+                            class="gallery-image w-full h-auto object-cover rounded-lg shadow-xl cursor-pointer transition transform hover:scale-[1.01] mb-6">
+                    </div>
+
+                    <h4 class="text-xl font-bold text-gray-700 mb-3">Key Features & Impact:</h4>
+                    <ul class="list-disc list-inside space-y-2 ml-4 text-gray-600">
+                        <li><strong>Predictive Analytics:</strong> Applied Machine Learning on real-time sensor data (Voltage, Temp) and past performance to forecast complex trends of battery degradation (State of Health - SoH).</li>
+                        <li><strong>Full-Stack Development:</strong> Developed a predictive analytics dashboard webapp using React for the front-end and Python/FastAPI for the backend model deployment.</li>
+                        <li><strong>Real-time Indicators:</strong> Provided crucial predictive health indicators, enhancing the analysis of the safety and lifetime of lithium-ion battery systems for Electric Vehicles.</li>
+                        <li><strong>Tech Stack:</strong> Successfully integrated multiple technologies including React, Python, FastAPI, and Arduino (for sensor data).</li>
+                    </ul>
+                </div>
+
+                <!-- Project 3: Airbnb Market Analysis Dashboard -->
+                <div class="bg-white p-8 rounded-xl shadow-xl hover:shadow-2xl transition duration-300">
+                    <h3 class="text-2xl font-semibold text-primary-dark mb-4">Project 3: Airbnb Market Analysis Dashboard</h3>
+                    <p class="mb-4 text-gray-700"><strong>Role:</strong> Student / Designer | <strong>Tool:</strong> Power BI, Excel, Python</p>
+
+                    <!-- Single Screenshot (clickable for expansion) -->
+                    <img src="Screenshot 2025-10-10 114427.png"
+                        alt="Screenshot of Airbnb Market Analysis Dashboard"
+                        onerror="this.onerror=null;this.src='https://placehold.co/800x600/8b5cf6/ffffff?text=Airbnb+Dashboard+Overview';"
+                        data-index="4"
+                        class="gallery-image w-full h-auto object-cover rounded-lg shadow-xl cursor-pointer transition transform hover:scale-[1.01] mb-6">
+                    <!-- END SINGLE IMAGE -->
+
+                    <h4 class="text-xl font-bold text-gray-700 mb-3">Key Features & Impact:</h4>
+                    <ul class="list-disc list-inside space-y-2 ml-4 text-gray-600">
+                        <li><strong>Starting Line:</strong> First major project after learning the ins and outs of the software during my academic semesters.</li>
+                        <li><strong>Comprehensive Market Analysis:</strong> Presented a comprehensive analysis of the Airbnb market, delivering informative insights to potential clients or market researchers.</li>
+                        <li><strong>Data Preprocessing:</strong> Examined and catalogued raw data using Excel and Python before visualization in Power BI.</li>
+                        <li><strong>Design-Led Insight:</strong> Employed a dark, high-contrast theme with custom colors (vibrant blue and magenta) to make the dashboard visually distinct and the core metrics (e.g., Total Reviews (328K), Maximum Cost ($2.99K)) instantly readable.</li>
+                        <li><strong>Geospatial Visualization:</strong> Utilized map visuals to show listing density and provide a geographical context for the data analysis.</li>
+                    </ul>
+                </div>
+            </section>
+            
+            <!-- 3. ETL & Data Engineering Pipeline -->
+            <section id="etl-pipeline" class="mb-16 pt-8">
+                <h2 class="text-3xl font-bold text-gray-900 border-b-2 border-primary-accent pb-2 mb-8">3. ETL & Data Engineering Pipeline</h2>
+                <p class="text-gray-600 mb-8">Demonstrating skills in building robust, reproducible, and scalable data infrastructure using modern data engineering practices.</p>
+
+                <!-- ETL Project: PakWheels ETL Pipeline -->
+                <div class="bg-white p-8 rounded-xl shadow-xl hover:shadow-2xl transition duration-300 border-l-4 border-primary-accent">
+                    <h3 class="text-2xl font-semibold text-primary-dark mb-4">PakWheels Classifieds ETL Pipeline</h3>
+                    <p class="mb-4 text-gray-700"><strong>Role:</strong> Data Engineer / Project Lead | <strong>Tools:</strong> Python, Apache Spark, Docker Compose, DAGs, Parquet</p>
+
+                    <h4 class="text-xl font-bold text-gray-700 mb-3">Technical Approach & Deliverables:</h4>
+                    <ul class="list-disc list-inside space-y-2 ml-4 text-gray-600">
+                        <li><strong>Containerization for Reproducibility:</strong> Created and containerized the entire ETL pipeline using Docker Compose to ensure reproducible services across end-systems, simplifying deployment and environment setup.</li>
+                        <li><strong>Data Transformation:</strong> Transformed raw classifieds data with Apache Spark to handle large datasets efficiently and establish an analytical-ready Data Lake output.</li>
+                        <li><strong>Data Storage Optimization:</strong> Introduced the Parquet format for data querying and storage, significantly streamlining downstream analysis and improving query performance.</li>
+                        <li><strong>Workflow Management:</strong> Planned and executed data movement using DAGs (Directed Acyclic Graphs) to ensure proper sequencing and dependency management of the pipeline steps.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- 4. Creative Design Portfolio (10 Years Experience) -->
+            <section id="design-work" class="mb-16 pt-8">
+                <h2 class="text-3xl font-bold text-gray-900 border-b-2 border-primary-accent pb-2 mb-8">4. Creative Design Portfolio (10 Years Experience)</h2>
+                <p class="text-gray-600 mb-8">Leveraging a decade of self-taught hobbyist graphic design experience to create engaging visual content that complements and supports data narratives, branding, and marketing goals. Click any image to view it full screen!</p>
+
+                <!-- CREATIVE DESIGN GALLERY GRID (Lightbox still works) -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4" id="design-gallery">
+                    
+                    <!-- Placeholder Image 1: Logo Design -->
+                    <img src="isys logo.png"
+                        alt="Example of Logo Design"
+                        data-index="5"
+                        class="gallery-image w-full h-full object-cover rounded-lg shadow-md cursor-pointer transition transform hover:scale-[1.03] hover:shadow-xl duration-200 aspect-square border-2 border-primary-accent/50">
+                    
+                    <!-- Placeholder Image 2: Social Media Post -->
+                    <img src="Screenshot 2025-10-10 230025.png"
+                        alt="Example of Corporate Event Design"
+                        data-index="6"
+                        class="gallery-image w-full h-full object-cover rounded-lg shadow-md cursor-pointer transition transform hover:scale-[1.03] hover:shadow-xl duration-200 aspect-square border-2 border-primary-accent/50">
+                    
+                    <!-- Placeholder Image 3: Infographic/Data Story -->
+                    <img src="apsfv2white.png"
+                        alt="Example of Logo Design 2"
+                        data-index="7"
+                        class="gallery-image w-full h-full object-cover rounded-lg shadow-md cursor-pointer transition transform hover:scale-[1.03] hover:shadow-xl duration-200 aspect-square border-2 border-primary-accent/50">
+                    
+                    <!-- Placeholder Image 4: Brochure Layout -->
+                    <img src="Screenshot 2025-10-10 230054.png"
+                        alt="Example Advert Design"
+                        data-index="8"
+                        class="gallery-image w-full h-full object-cover rounded-lg shadow-md cursor-pointer transition transform hover:scale-[1.03] hover:shadow-xl duration-200 aspect-square border-2 border-primary-accent/50">
+                    
+                </div>
+                <!-- END CREATIVE DESIGN GALLERY GRID -->
+            </section>
+
+            <!-- 5. Technical Skills Summary -->
+            <section id="skills" class="mb-16 pt-8">
+                <h2 class="text-3xl font-bold text-gray-900 border-b-2 border-primary-accent pb-2 mb-8">5. Technical Skills Summary</h2>
+                
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Data Science & Engineering -->
+                    <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-primary-accent hover:scale-[1.01] transition duration-300">
+                        <h3 class="text-xl font-bold text-primary-dark mb-3">Data Science & Engineering</h3>
+                        <ul class="list-disc list-inside space-y-1 text-gray-600">
+                            <li><strong>Languages:</strong> Python, SQL, C++, R</li>
+                            <li><strong>ML/Modeling:</strong> Predictive Analytics, Classification</li>
+                            <li><strong>ETL & Infra:</strong> Apache Spark, Docker, Docker Compose, Parquet</li>
+                            <li><strong>Web/Deployment:</strong> React, FastAPI</li>
+                        </ul>
+                    </div>
+
+                    <!-- BI & Visualization -->
+                    <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-primary-accent hover:scale-[1.01] transition duration-300">
+                        <h3 class="text-xl font-bold text-primary-dark mb-3">BI & Visualization</h3>
+                        <ul class="list-disc list-inside space-y-1 text-gray-600">
+                            <li>Power BI (Advanced), DAX & M Query</li>
+                            <li>Metabase & Superset</li>
+                            <li>Data Modeling & Storytelling</li>
+                            <li>Excel (Advanced)</li>
+                        </ul>
+                    </div>
+
+                    <!-- Design & Development -->
+                    <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-primary-accent hover:scale-[1.01] transition duration-300">
+                        <h3 class="text-xl font-bold text-primary-dark mb-3">Creative Design & Other</h3>
+                        <ul class="list-disc list-inside space-y-1 text-gray-600">
+                            <li>Adobe Photoshop & Illustrator</li>
+                            <li>UI/UX Principles & Typography</li>
+                            <li>3D Modeling & Development</li>
+                            <li>HTML/CSS, Version Control (GitHub)</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- LIGHTBOX MODAL STRUCTURE (Hidden by default) -->
+        <div id="lightbox-modal" 
+            class="fixed inset-0 bg-black bg-opacity-90 z-[9999] hidden items-center justify-center p-4 transition-opacity duration-300"
+            onclick="closeModal(event)">
+            
+            <div class="relative w-full h-full flex items-center justify-center">
+                <!-- Close Button -->
+                <button onclick="closeModal(event)" 
+                        class="absolute top-4 right-4 text-white text-4xl font-light hover:text-primary-accent transition focus:outline-none z-50 p-2">
+                    &times;
+                </button>
+
+                <!-- Image Container -->
+                <img id="modal-image" 
+                    src="" 
+                    alt="Expanded portfolio image" 
+                    class="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl transition duration-300"
+                    onclick="event.stopPropagation()"> <!-- Stop click from closing modal -->
+
+                <!-- Previous Button -->
+                <button onclick="changeImage(-1, event)"
+                        class="absolute left-0 sm:left-4 top-1/2 transform -translate-y-1/2 text-white text-5xl opacity-75 hover:opacity-100 transition p-4 rounded-full focus:outline-none z-40">
+                    &#10094;
+                </button>
+
+                <!-- Next Button -->
+                <button onclick="changeImage(1, event)"
+                        class="absolute right-0 sm:right-4 top-1/2 transform -translate-y-1/2 text-white text-5xl opacity-75 hover:opacity-100 transition p-4 rounded-full focus:outline-none z-40">
+                    &#10095;
+                </button>
+            </div>
+        </div>
+        <!-- END LIGHTBOX MODAL -->
+
+        <!-- Footer -->
+        <footer class="bg-gray-800 text-white py-6 mt-12">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                <p>&copy; <span id="current-year"></span> Hamdan Abdollah Khan | Data & Design Portfolio</p>
+            </div>
+        </footer>
+    </div>
+
+
+    <script>
+        // Set current year in the footer
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+
+        // --- PRELOADER DRAG & DROP LOGIC ---
+        let collectedTools = 0;
+        const totalTools = 6;
+        const preloader = document.getElementById('preloader');
+        const portfolioContent = document.getElementById('portfolio-content');
+        const folderTarget = document.getElementById('folder-target');
+        const progressText = document.getElementById('progress-text');
+        const tools = document.querySelectorAll('.tool-item');
+        const skipButtonContainer = document.getElementById('skip-button-container');
+        let isPortfolioLoaded = false;
+
+        // Show skip button after 5 seconds
+        setTimeout(() => {
+            if (skipButtonContainer) {
+                skipButtonContainer.classList.remove('opacity-0');
+            }
+        }, 2000);
+
+        function updateProgress() {
+            progressText.textContent = `${collectedTools} / ${totalTools} tools collected`;
+            if (collectedTools === totalTools) {
+                document.getElementById('preloader-text').textContent = "Data Stack Complete! Launching Portfolio...";
+                loadPortfolio();
+            }
+        }
+
+        function loadPortfolio() {
+            // Check if preloader exists and is currently visible
+            if (!preloader || preloader.style.opacity === '0') return;
+
+            // 1. CLEANUP: Remove global drag listeners to prevent null errors
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('touchmove', drag, { passive: false });
+            document.removeEventListener('mouseup', endDrag);
+            document.removeEventListener('touchend', endDrag);
+
+            // 2. TRANSITION: Fade out preloader
+            preloader.style.opacity = '0';
+            
+            setTimeout(() => {
+                preloader.style.display = 'none';
+                portfolioContent.classList.remove('opacity-0', 'pointer-events-none');
+                
+                // 3. START CONTENT: Ensure dynamic elements load
+                startDynamicHeadline();
+                showSlides(0);
+            }, 1000); // Wait for fade-out transition
+        }
+
+        // --- Dragging Logic (Supports both mouse and touch) ---
+        let dragItem = null;
+        let offset = { x: 0, y: 0 };
+        const FOLDER_SIZE = 250; // Approximated folder size in pixels
+
+        function startDrag(e) {
+            // Ensure we are only starting drag on a valid tool item
+            const potentialDragItem = e.target.closest('.tool-item');
+            if (!potentialDragItem || potentialDragItem.style.display === 'none') {
+                dragItem = null; // Explicitly ensure dragItem is null if not starting a drag
+                return;
+            }
+            
+            dragItem = potentialDragItem;
+            dragItem.classList.add('dragging');
+            const rect = dragItem.getBoundingClientRect();
+
+            // Handle both mouse and touch start
+            const clientX = e.clientX || e.touches[0].clientX;
+            const clientY = e.clientY || e.touches[0].clientY;
+
+            offset.x = clientX - rect.left;
+            offset.y = clientY - rect.top;
+
+            // Stop CSS floating animation during drag
+            dragItem.style.animation = 'none';
+            dragItem.style.transition = 'none';
+
+            e.preventDefault(); // Prevent default browser drag behavior
+        }
+
+        function drag(e) {
+            if (!dragItem) return; // Safely exit if no item is being dragged
+
+            // Handle both mouse and touch move
+            const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : null);
+            const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : null);
+
+            // Ensure we have coordinates (touch can fail if finger leaves screen)
+            if (clientX === null || clientY === null) return;
+            
+            let newX = clientX - offset.x;
+            let newY = clientY - offset.y;
+            
+            // Constrain movement within the viewport
+            newX = Math.max(0, Math.min(window.innerWidth - dragItem.offsetWidth, newX));
+            newY = Math.max(0, Math.min(window.innerHeight - dragItem.offsetHeight, newY));
+
+            dragItem.style.left = `${newX}px`;
+            dragItem.style.top = `${newY}px`;
+
+            // Check proximity to folder target
+            const folderRect = folderTarget.getBoundingClientRect();
+            const toolCenterX = newX + dragItem.offsetWidth / 2;
+            const toolCenterY = newY + dragItem.offsetHeight / 2;
+
+            // Simple distance check for drop target activation
+            const distance = Math.sqrt(
+                Math.pow(toolCenterX - folderRect.left - folderRect.width / 2, 2) +
+                Math.pow(toolCenterY - folderRect.top - folderRect.height / 2, 2)
+            );
+
+            if (distance < FOLDER_SIZE * 0.4) {
+                folderTarget.classList.add('active');
+            } else {
+                folderTarget.classList.remove('active');
+            }
+        }
+
+        function endDrag(e) {
+            if (!dragItem) return; // Safely exit if no item was being dragged
+
+            dragItem.classList.remove('dragging');
+            folderTarget.classList.remove('active');
+
+            const folderRect = folderTarget.getBoundingClientRect();
+            const toolRect = dragItem.getBoundingClientRect();
+            
+            const toolCenterX = toolRect.left + toolRect.width / 2;
+            const toolCenterY = toolRect.top + toolRect.height / 2;
+
+            const distance = Math.sqrt(
+                Math.pow(toolCenterX - folderRect.left - folderRect.width / 2, 2) +
+                Math.pow(toolCenterY - folderRect.top - folderRect.height / 2, 2)
+            );
+
+            if (distance < FOLDER_SIZE * 0.4) {
+                // Successful drop!
+                dragItem.style.opacity = '0';
+                dragItem.style.transform = 'scale(0.1)';
+                dragItem.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+                
+                // Remove it from the flow after animation
+                setTimeout(() => {
+                    if (dragItem) dragItem.style.display = 'none'; // Check added for safety
+                    collectedTools++;
+                    updateProgress();
+                }, 300);
+            } else {
+                // Snap back/Re-enable animation
+                dragItem.style.transition = 'transform 0.1s ease-out';
+                // Re-calculate animation duration based on data attribute
+                dragItem.style.animation = `float-animation ${parseFloat(dragItem.dataset.floatDelay) + 5}s ${parseFloat(dragItem.dataset.floatDelay) * 0.5}s infinite alternate ease-in-out`;
+            }
+            dragItem = null; // Reset state
+        }
+
+        // --- Event Listeners for Drag and Drop ---
+        tools.forEach(tool => {
+            tool.addEventListener('mousedown', startDrag);
+            tool.addEventListener('touchstart', startDrag, { passive: false });
+        });
+
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('touchmove', drag, { passive: false });
+        
+        document.addEventListener('mouseup', endDrag);
+        document.addEventListener('touchend', endDrag);
+
+        // --- PORTFOLIO FUNCTIONS (Re-initialization needed after loading) ---
+        
+        // --- Photo Scroll Transition Logic (Shrinking profile photo) ---
+        const photo = document.getElementById('profile-photo');
+        const scrollThreshold = 100; // Pixels scrolled before shrinking
+        const largeClasses = ['w-80', 'h-80', 'border-8', 'ring-8'];
+        const smallClasses = ['w-36', 'h-36', 'border-4', 'ring-4'];
+
+        function handleScroll() {
+            if (!photo || portfolioContent.classList.contains('opacity-0')) return;
+            
+            if (window.scrollY > scrollThreshold) {
+                photo.classList.remove(...largeClasses);
+                photo.classList.add(...smallClasses);
+            } else {
+                photo.classList.remove(...smallClasses);
+                photo.classList.add(...largeClasses);
+            }
+        }
+
+        window.addEventListener('scroll', handleScroll);
+        
+        // --- DYNAMIC HEADLINE LOGIC ---
+        const roles = [
+            "I am a Data Scientist.",
+            "I am a BI Analyst.",
+            "I am a Creative Designer.",
+            "I solve business problems.",
+            "I build data products."
+        ];
+        let roleIndex = 0;
+        const headlineElement = document.getElementById('dynamic-headline');
+        const typingSpeed = 100; 
+        const delayBetweenRoles = 2000; 
+
+        function typeWriter(text, i, cb) {
+             if (!headlineElement || portfolioContent.classList.contains('opacity-0')) return;
+            if (i < text.length) {
+                headlineElement.innerHTML = text.substring(0, i + 1) + '<span style="color: transparent;">' + text.substring(i + 1) + '</span>';
+                setTimeout(() => typeWriter(text, i + 1, cb), typingSpeed);
+            } else {
+                setTimeout(cb, delayBetweenRoles);
+            }
+        }
+
+        function eraseWriter(text, i, cb) {
+             if (!headlineElement || portfolioContent.classList.contains('opacity-0')) return;
+            if (i >= 0) {
+                headlineElement.innerHTML = text.substring(0, i) + '<span style="color: transparent;">' + text.substring(i) + '</span>';
+                setTimeout(() => eraseWriter(text, i - 1, cb), typingSpeed / 2);
+            } else {
+                cb();
+            }
+        }
+
+        function startDynamicHeadline() {
+            if (!headlineElement || portfolioContent.classList.contains('opacity-0')) return;
+            const currentRole = roles[roleIndex % roles.length];
+            // 1. Type
+            typeWriter(currentRole, 0, () => {
+                // 2. Erase
+                eraseWriter(currentRole, currentRole.length, () => {
+                    roleIndex++;
+                    // 3. Loop
+                    startDynamicHeadline();
+                });
+            });
+        }
+        
+        // --- CAROUSEL LOGIC (Project 1 Slideshow) ---
+        let slideIndex = 0; 
+
+        function showSlides(n) {
+            const slides = document.querySelectorAll('#project-carousel .carousel-slide');
+            const dots = document.querySelectorAll('.carousel-dot');
+            const carouselContainer = document.getElementById('project-carousel');
+            
+            // Added check for the container itself and if the portfolio is still hidden
+            if (!carouselContainer || slides.length === 0 || portfolioContent.classList.contains('opacity-0')) return;
+
+            if (n >= slides.length) {slideIndex = 0}    
+            if (n < 0) {slideIndex = slides.length - 1}
+            
+            for (let i = 0; i < slides.length; i++) {
+                // Defensive checks: Ensure the elements are not null before accessing their style
+                if (slides[i]) slides[i].style.display = "none";  
+                if (dots[i]) dots[i].style.backgroundColor = '#E5E7EB'; 
+            }
+            
+            // Defensive checks for the current slide
+            if (slides[slideIndex]) slides[slideIndex].style.display = "block";  
+            if (dots[slideIndex]) dots[slideIndex].style.backgroundColor = '#8B5CF6'; 
+        }
+
+        function plusSlides(n) {
+          showSlides(slideIndex += n);
+        }
+
+        function currentSlide(n) {
+          slideIndex = n;
+          showSlides(slideIndex);
+        }
+        
+        // --- LIGHTBOX/MODAL LOGIC ---
+        let currentImageIndex = 0;
+        let allGalleryImages = []; 
+        const modal = document.getElementById('lightbox-modal');
+        const modalImage = document.getElementById('modal-image');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            allGalleryImages = Array.from(document.querySelectorAll('.gallery-image'));
+            
+            allGalleryImages.forEach((img, index) => {
+                img.addEventListener('click', () => {
+                    openModal(index);
+                });
+            });
+
+            // Initial call to set correct state
+            handleScroll();
+            updateProgress();
+        });
+
+        function openModal(index) {
+            if (allGalleryImages.length === 0) return;
+
+            currentImageIndex = index;
+            
+            modalImage.src = allGalleryImages[currentImageIndex].src;
+            modalImage.alt = allGalleryImages[currentImageIndex].alt;
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex', 'fade-in');
+            document.body.classList.add('modal-open'); 
+        }
+
+        function closeModal(event) {
+            if (event.target === modal || event.target.closest('button')) {
+                modal.classList.remove('flex', 'fade-in');
+                modal.classList.add('hidden');
+                document.body.classList.remove('modal-open'); 
+            }
+        }
+
+        function changeImage(n, event) {
+            event.stopPropagation();
+
+            if (allGalleryImages.length === 0) return;
+
+            let newIndex = currentImageIndex + n;
+            
+            if (newIndex >= allGalleryImages.length) {
+                newIndex = 0;
+            } else if (newIndex < 0) {
+                newIndex = allGalleryImages.length - 1;
+            }
+            
+            currentImageIndex = newIndex;
+
+            modalImage.src = allGalleryImages[currentImageIndex].src;
+            modalImage.alt = allGalleryImages[currentImageIndex].alt;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!modal.classList.contains('hidden')) {
+                if (e.key === 'ArrowLeft') {
+                    changeImage(-1, e);
+                } else if (e.key === 'ArrowRight') {
+                    changeImage(1, e);
+                } else if (e.key === 'Escape') {
+                    closeModal({ target: modal, preventDefault: () => {} });
+                }
+            }
+        });
+    </script>
+</body>
+</html>
