@@ -57,6 +57,7 @@
             transition: transform 0.1s ease-out, box-shadow 0.2s ease-out;
             border-radius: 50%;
             padding: 8px;
+            z-index: 10001; /* Ensure tools are always above the folder */
         }
         .tool-item:hover {
             transform: scale(1.2) rotate(5deg) !important; /* Pop out effect */
@@ -70,8 +71,7 @@
 
         /* Folder target container styles */
         #folder-target {
-            transition: transform 0.15s ease-out;
-            z-index: 1000;
+            z-index: 1000; /* Lower than tool-item */
         }
         
         /* The container scales, but we apply the glow to the image inside */
@@ -380,31 +380,32 @@
 
                 <!-- CREATIVE DESIGN GALLERY GRID (Lightbox still works) -->
                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4" id="design-gallery">
-                    
-                    <!-- Placeholder Image 1: Logo Design -->
-                    <img src="isys logo.png"
-                        alt="Example of Logo Design"
-                        data-index="5"
-                        class="gallery-image w-full h-full object-cover rounded-lg shadow-md cursor-pointer transition transform hover:scale-[1.03] hover:shadow-xl duration-200 aspect-square border-2 border-primary-accent/50">
-                    
-                    <!-- Placeholder Image 2: Social Media Post -->
-                    <img src="Screenshot 2025-10-10 230025.png"
-                        alt="Example of Corporate Event Design"
-                        data-index="6"
-                        class="gallery-image w-full h-full object-cover rounded-lg shadow-md cursor-pointer transition transform hover:scale-[1.03] hover:shadow-xl duration-200 aspect-square border-2 border-primary-accent/50">
-                    
-                    <!-- Placeholder Image 3: Infographic/Data Story -->
-                    <img src="apsfv2white.png"
-                        alt="Example of Logo Design 2"
-                        data-index="7"
-                        class="gallery-image w-full h-full object-cover rounded-lg shadow-md cursor-pointer transition transform hover:scale-[1.03] hover:shadow-xl duration-200 aspect-square border-2 border-primary-accent/50">
-                    
-                    <!-- Placeholder Image 4: Brochure Layout -->
-                    <img src="isysflexv2.png"
-                        alt="Example Social Media Design"
-                        data-index="8"
-                        class="gallery-image w-full h-full object-cover rounded-lg shadow-md cursor-pointer transition transform hover:scale-[1.03] hover:shadow-xl duration-200 aspect-square border-2 border-primary-accent/50">
-                    
+                    <!-- Example gallery item -->
+                    <div class="bg-black p-4 rounded-lg flex items-center justify-center">
+                        <img src="isys logo.png"
+                            alt="Example of Logo Design"
+                            data-index="5"
+                            class="gallery-image w-full h-full object-contain rounded-lg shadow-md cursor-pointer transition transform hover:scale-[1.03] hover:shadow-xl duration-200 aspect-square drop-shadow-[0_0_8px_#fff]">
+                    </div>
+                    <!-- Repeat for each image -->
+                    <div class="bg-black p-4 rounded-lg flex items-center justify-center">
+                        <img src="Screenshot 2025-10-10 230025.png"
+                            alt="Example of Corporate Event Design"
+                            data-index="6"
+                            class="gallery-image w-full h-full object-contain rounded-lg shadow-md cursor-pointer transition transform hover:scale-[1.03] hover:shadow-xl duration-200 aspect-square drop-shadow-[0_0_8px_#fff]">
+                    </div>
+                    <div class="bg-black p-4 rounded-lg flex items-center justify-center">
+                        <img src="apsfv2white.png"
+                            alt="Example of Logo Design 2"
+                            data-index="7"
+                            class="gallery-image w-full h-full object-contain rounded-lg shadow-md cursor-pointer transition transform hover:scale-[1.03] hover:shadow-xl duration-200 aspect-square drop-shadow-[0_0_8px_#fff]">
+                    </div>
+                    <div class="bg-black p-4 rounded-lg flex items-center justify-center">
+                        <img src="isysflexv2.png"
+                            alt="Example Social Media Design"
+                            data-index="8"
+                            class="gallery-image w-full h-full object-contain rounded-lg shadow-md cursor-pointer transition transform hover:scale-[1.03] hover:shadow-xl duration-200 aspect-square drop-shadow-[0_0_8px_#fff]">
+                    </div>
                 </div>
                 <!-- END CREATIVE DESIGN GALLERY GRID -->
             </section>
